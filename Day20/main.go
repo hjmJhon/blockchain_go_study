@@ -1,16 +1,10 @@
 package main
 
 import (
-	"study.com/Day20/db"
-	"study.com/Day20/types"
+	"study.com/Day20/cmd"
 )
 
 func main() {
 
-	blockchain := types.AddGenesisBlockToBlockchain("genesis block")
-	blockchain.AddBlockToBlockchain("second block")
-
-	types.PrintBlockChain(blockchain)
-
-	defer db.CloseDB()
+	cmd.Run()
 }

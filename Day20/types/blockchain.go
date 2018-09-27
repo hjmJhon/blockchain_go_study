@@ -29,12 +29,19 @@ func (blc *Blockchain) AddBlockToBlockchain(data string) {
 /*
 	将创世区块添加进区块链
 */
-func AddGenesisBlockToBlockchain(data string) *Blockchain {
+func AddGenesisBlockToBlockchain(data string) {
 	block := CreateGenesisBlock([]byte(data))
 	db.Add(block.Hash, block.Serialize())
 	db.Add([]byte("hash"), block.Hash)
+}
+
+func GetBlockchain() *Blockchain {
+	currHash := db.Query([]byte("hash"))
+	if currHash == nil {
+		return nil
+	}
 	return &Blockchain{
-		CurrHash: block.Hash,
+		CurrHash: currHash,
 		DB:       db.DB,
 	}
 }
