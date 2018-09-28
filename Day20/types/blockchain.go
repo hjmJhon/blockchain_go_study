@@ -30,6 +30,11 @@ func (blc *Blockchain) AddBlockToBlockchain(data string) {
 	将创世区块添加进区块链
 */
 func AddGenesisBlockToBlockchain(data string) {
+	currHash := db.Query([]byte("hash"))
+	if currHash != nil {
+		fmt.Println("创世区块已存在")
+		return
+	}
 	block := CreateGenesisBlock([]byte(data))
 	db.Add(block.Hash, block.Serialize())
 	db.Add([]byte("hash"), block.Hash)
