@@ -14,7 +14,7 @@ import (
 
 type Block struct {
 	Height    uint64
-	Data      []byte
+	Txs       []*Transaction
 	Nonce     uint64
 	Diff      uint64
 	PreHash   []byte
@@ -23,7 +23,7 @@ type Block struct {
 }
 
 func (block *Block) setHash() {
-	hash := bytes.Join([][]byte{utils.Int64ToByte((int64)(block.Height)), block.Data, utils.Int64ToByte((int64)(block.Nonce)), block.PreHash, utils.Int64ToByte(block.Timestamp)}, []byte{})
+	hash := bytes.Join([][]byte{utils.Int64ToByte((int64)(block.Height)), BuildTxHashBytes(block.Txs), utils.Int64ToByte((int64)(block.Nonce)), block.PreHash, utils.Int64ToByte(block.Timestamp)}, []byte{})
 	sum := sha256.Sum256(hash)
 	block.Hash = sum[:]
 }
@@ -31,17 +31,17 @@ func (block *Block) setHash() {
 /*
 	创建创世区块
 */
-func CreateGenesisBlock(data []byte) *Block {
-	return NewBlock(data, 0, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+func CreateGenesisBlock(txs []*Transaction) *Block {
+	return NewBlock(txs, 0, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 }
 
 /*
 	创建区块
 */
-func NewBlock(data []byte, height uint64, preHash []byte) *Block {
+func NewBlock(txs []*Transaction, height uint64, preHash []byte) *Block {
 	block := &Block{
 		Height:    height,
-		Data:      data,
+		Txs:       txs,
 		PreHash:   preHash,
 		Timestamp: time.Now().Unix(),
 	}
@@ -90,25 +90,33 @@ func Deserialize(blockBytes []byte) *Block {
 	return &block
 }
 
+func BuildTxHashBytes(Txs []*Transaction) []byte {
+	var result []byte
+	for _, tx := range Txs {
+		txhashBytes, _ := hex.DecodeString(tx.TxHash)
+		result = bytes.Join([][]byte{txhashBytes}, []byte{})
+	}
+	return result
+}
+
 type blockString struct {
-	Height    uint64 `json:"height"`
-	Data      string `json:"data"`
-	Nonce     uint64 `json:"nonce"`
-	Diff      uint64 `json:"diff"`
-	PreHash   string `json:"preHash"`
-	Hash      string `json:"hash"`
-	Timestamp string `json:"timestamp"`
+	Height    uint64         `json:"height"`
+	Txs       []*Transaction `json:"tx"`
+	Nonce     uint64         `json:"nonce"`
+	Diff      uint64         `json:"diff"`
+	PreHash   string         `json:"pre_hash""`
+	Hash      string         `json:"hash"`
+	Timestamp string         `json:"timestamp"`
 }
 
 func (block *Block) ToString() {
-	data := string(block.Data)
 	preHash := hex.EncodeToString(block.PreHash)
 	hash := hex.EncodeToString(block.Hash)
 	timeStamp := time.Unix(block.Timestamp, 0).Format("2006-01-02 03:04:05 PM")
 
 	blockString := blockString{
 		Height:    block.Height,
-		Data:      data,
+		Txs:       block.Txs,
 		Nonce:     block.Nonce,
 		Diff:      block.Diff,
 		PreHash:   preHash,

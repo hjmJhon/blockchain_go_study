@@ -35,7 +35,7 @@ func (pow *POW) Run() (nonce uint64, hash []byte) {
 	sum := [32]byte{}
 	var hashStr string
 	for {
-		h = bytes.Join([][]byte{utils.Int64ToByte((int64)(block.Height)), block.Data, utils.Int64ToByte(int64(n)), block.PreHash, utils.Int64ToByte(block.Timestamp)}, []byte{})
+		h = bytes.Join([][]byte{utils.Int64ToByte((int64)(block.Height)), BuildTxHashBytes(block.Txs), utils.Int64ToByte(int64(n)), block.PreHash, utils.Int64ToByte(block.Timestamp)}, []byte{})
 		sum = sha256.Sum256(h)
 		fmt.Printf("\r%x", sum)
 		hashStr = hex.EncodeToString(sum[:])

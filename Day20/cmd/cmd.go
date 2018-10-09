@@ -5,17 +5,21 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"study.com/Day20/db"
 	"study.com/Day20/types"
+	"study.com/Day20/utils"
 )
 
 func Run() {
 	genesisFlag := flag.NewFlagSet("genesis", flag.ExitOnError)
-	addBlockFlag := flag.NewFlagSet("addBlock", flag.ExitOnError)
+	sendFlag := flag.NewFlagSet("send", flag.ExitOnError)
+	balanceFlag := flag.NewFlagSet("balance", flag.ExitOnError)
 	printBlockchainFlag := flag.NewFlagSet("printBlockchain", flag.ExitOnError)
 
-	genesisFlagValue := genesisFlag.String("data", "send 100 BTC to xiaoming", "genesis block data")
-	addBlockFlagValue := addBlockFlag.String("data", "send 100 HPB to xiaoming", "block data")
+	genesisFlagValue := genesisFlag.String("address", "xiaoming", "create the genesis block's address")
+	sendFlagFromValue := sendFlag.String("from", "", "the address sending asset")
+	sendFlagToValue := sendFlag.String("to", "", "the address receiving asset")
+	sendFlagAmountValue := sendFlag.String("amount", "", "asset amount")
+	balanceFlagValue := balanceFlag.String("address", "", "get the balance of the specified address")
 
 	args := os.Args
 
@@ -27,8 +31,13 @@ func Run() {
 			log.Panic(err)
 		}
 		break
-	case "addBlock":
-		if err := addBlockFlag.Parse(args[2:]); err != nil {
+	case "send":
+		if err := sendFlag.Parse(args[2:]); err != nil {
+			log.Panic(err)
+		}
+		break
+	case "balance":
+		if err := balanceFlag.Parse(args[2:]); err != nil {
 			log.Panic(err)
 		}
 		break
@@ -47,23 +56,29 @@ func Run() {
 			fmt.Println("the genesis block data can not be empty!")
 			exit()
 		}
-		types.AddGenesisBlockToBlockchain(*genesisFlagValue)
 
-		defer db.CloseDB()
+		txs := types.NewCoinbaseTx(*genesisFlagValue)
+		types.AddGenesisBlockToBlockchain([]*types.Transaction{txs})
 	}
 
-	//添加区块
-	if addBlockFlag.Parsed() {
-		if len(*addBlockFlagValue) == 0 {
-			fmt.Println("the block data can not be empty!")
+	if balanceFlag.Parsed() {
+		if len(*balanceFlagValue) == 0 {
+			fmt.Println("the address can not be empty!")
 			exit()
 		}
-		blockchain := types.GetBlockchain()
-		checkBlockchain(blockchain)
+		getBalance(*balanceFlagValue)
+	}
 
-		blockchain.AddBlockToBlockchain(*addBlockFlagValue)
-
-		defer db.CloseDB()
+	//发送交易
+	if sendFlag.Parsed() {
+		if len(*sendFlagFromValue) == 0 || len(*sendFlagToValue) == 0 || len(*sendFlagAmountValue) == 0 {
+			exit()
+		} else {
+			from := utils.Json2Slice(*sendFlagFromValue)
+			to := utils.Json2Slice(*sendFlagToValue)
+			amount := utils.Json2Slice(*sendFlagAmountValue)
+			send(from, to, amount)
+		}
 	}
 
 	//打印所有的区块
@@ -72,9 +87,25 @@ func Run() {
 		checkBlockchain(blockchain)
 
 		types.PrintBlockChain(blockchain)
-
-		defer db.CloseDB()
 	}
+}
+
+//获取余额
+func getBalance(address string) {
+	blockchain := types.GetBlockchain()
+	checkBlockchain(blockchain)
+	balance := blockchain.GetBalance(address)
+	fmt.Println("balance:", balance)
+}
+
+//发送交易
+func send(from []string, to []string, amount []string) {
+	blockchain := types.GetBlockchain()
+	checkBlockchain(blockchain)
+
+	var txs []*types.Transaction
+	txs = append(txs, types.NewTx(from[0], to[0], amount[0]))
+	blockchain.AddBlockToBlockchain(txs)
 }
 
 func checkBlockchain(blockchain *types.Blockchain) {
@@ -97,7 +128,8 @@ func exit() {
 }
 
 func printUseage() {
-	fmt.Println("genesis -data:create genesis block and add to the blockchain")
-	fmt.Println("addBlock -data:create block and add to the blockchain")
+	fmt.Println("genesis -address:create genesis block and add to the blockchain")
+	fmt.Println("balabce -address:get the balance of the specified address")
+	fmt.Println("send -from  -to  -amount:send transaction to the blockchain")
 	fmt.Println("printBlockchain:print the all block")
 }

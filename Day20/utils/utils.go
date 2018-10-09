@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"log"
 )
 
@@ -17,4 +18,10 @@ func Int64ToByte(i int64) []byte {
 	}
 
 	return buff.Bytes()
+}
+
+func Json2Slice(str string) []string {
+	var result []string
+	json.Unmarshal([]byte(str), &result)
+	return result
 }
