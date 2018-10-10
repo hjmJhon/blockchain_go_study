@@ -3,7 +3,9 @@ package types
 import (
 	"fmt"
 	"github.com/boltdb/bolt"
+	"log"
 	"math/big"
+	"strconv"
 	"study.com/Day20/db"
 )
 
@@ -47,23 +49,71 @@ func AddGenesisBlockToBlockchain(txs []*Transaction) {
 	获取余额
 */
 func (blc *Blockchain) GetBalance(address string) int {
+	defer db.CloseDB()
+
 	var result int
-	utxos := blc.GetUTXOs(address)
+	utxos := blc.GetUTXOs(address, []*Transaction{})
 	for _, utxo := range utxos {
 		result += utxo.Output.Value
 	}
 	return result
 }
 
-func (blc *Blockchain) GetUTXOs(address string) []*UTXO {
+func (blc *Blockchain) GetUTXOs(address string, txs []*Transaction) []*UTXO {
 	var result []*UTXO
 	var spentOutputs = make(map[string][]int)
-	iterator := blc.Iterator()
-	defer db.CloseDB()
 
+	for _, tx := range txs {
+		if tx.Inputs[0].Index != -1 {
+			for _, in := range tx.Inputs {
+				if in.ScriptSig == address {
+					spentOutputs[in.Hash] = append(spentOutputs[in.Hash], in.Index)
+				}
+			}
+		}
+	}
+
+	for _, tx := range txs {
+	B:
+		for index, out := range tx.Outputs {
+			if out.ScriptPubKey != address {
+				continue
+			}
+			if len(spentOutputs) > 0 {
+				var isUTXOSpent bool
+				for txhash, indexSlice := range spentOutputs {
+					for _, spentIndex := range indexSlice {
+						if index == spentIndex && txhash == tx.TxHash {
+							isUTXOSpent = true
+							continue B
+						}
+					}
+				}
+
+				if isUTXOSpent == false {
+					utxo := &UTXO{
+						TxHash: tx.TxHash,
+						Index:  index,
+						Output: out,
+					}
+					result = append(result, utxo)
+				}
+			} else {
+				utxo := &UTXO{
+					TxHash: tx.TxHash,
+					Index:  index,
+					Output: out,
+				}
+				result = append(result, utxo)
+			}
+		}
+	}
+
+	iterator := blc.Iterator()
 	for {
 		block := iterator.Next()
-		for _, tx := range block.Txs {
+		for i := len(block.Txs) - 1; i >= 0; i-- {
+			tx := block.Txs[i]
 			//inputs
 			//排除掉 coinbase 交易的 input
 			if tx.Inputs[0].Index != -1 {
@@ -76,24 +126,29 @@ func (blc *Blockchain) GetUTXOs(address string) []*UTXO {
 
 			//outputs
 			fmt.Println("spentOutputs: ", spentOutputs)
+		A:
 			for index, out := range tx.Outputs {
 				if out.ScriptPubKey != address {
 					continue
 				}
 				if len(spentOutputs) > 0 {
+					var isUTXOSpent bool
 					for txhash, indexSlice := range spentOutputs {
 						for _, spentIndex := range indexSlice {
 							if index == spentIndex && txhash == tx.TxHash {
-								continue
-							} else {
-								utxo := &UTXO{
-									TxHash: tx.TxHash,
-									Index:  index,
-									Output: out,
-								}
-								result = append(result, utxo)
+								isUTXOSpent = true
+								continue A
 							}
 						}
+					}
+
+					if isUTXOSpent == false {
+						utxo := &UTXO{
+							TxHash: tx.TxHash,
+							Index:  index,
+							Output: out,
+						}
+						result = append(result, utxo)
 					}
 				} else {
 					utxo := &UTXO{
@@ -112,6 +167,34 @@ func (blc *Blockchain) GetUTXOs(address string) []*UTXO {
 	}
 
 	return result
+}
+
+/*
+	获取用于交易的 UTXO
+*/
+func (blc *Blockchain) GetSpendableUTXOs(from, to, amount string, txs []*Transaction) (int, []*UTXO) {
+	utxos := blc.GetUTXOs(from, txs)
+
+	var value int
+	var utxosResult []*UTXO
+
+	number, err := strconv.Atoi(amount)
+	if err != nil {
+		log.Panic(err)
+	}
+	for _, utxo := range utxos {
+		value += utxo.Output.Value
+		utxosResult = append(utxosResult, utxo)
+		if value >= number {
+			break
+		}
+	}
+	if value < number {
+		fmt.Println("余额不足")
+		return -1, utxosResult
+	}
+
+	return value, utxosResult
 }
 
 func GetBlockchain() *Blockchain {

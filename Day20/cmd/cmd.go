@@ -102,10 +102,21 @@ func getBalance(address string) {
 func send(from []string, to []string, amount []string) {
 	blockchain := types.GetBlockchain()
 	checkBlockchain(blockchain)
+	checkTxArgs(from, to, amount)
 
 	var txs []*types.Transaction
-	txs = append(txs, types.NewTx(from[0], to[0], amount[0]))
+	for index, fromAddr := range from {
+		tx := types.NewTx(fromAddr, to[index], amount[index], blockchain, txs)
+		txs = append(txs, tx)
+	}
 	blockchain.AddBlockToBlockchain(txs)
+}
+
+func checkTxArgs(from, to, amount []string) {
+	if len(from) != len(to) || len(from) != len(amount) {
+		fmt.Println("invalidate arguments")
+		exit()
+	}
 }
 
 func checkBlockchain(blockchain *types.Blockchain) {

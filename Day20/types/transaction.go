@@ -34,26 +34,38 @@ func NewCoinbaseTx(address string) *Transaction {
 	return tx
 }
 
-func NewTx(from, to, amount string) *Transaction {
-	//xiaohong 给 xiaoqiang 转 1 eth
-	inputXiaohong := &TxInput{
-		Hash:      "4dccdaf210ecd57a6dc86558d56733e3747d81befee68412904c0b23c88c754e",
-		Index:     0,
-		ScriptSig: "xiaohong",
+/*
+	创建交易
+*/
+func NewTx(from, to, amount string, blc *Blockchain, txs []*Transaction) *Transaction {
+	value, utxos := blc.GetSpendableUTXOs(from, to, amount, txs)
+	if value == -1 {
+		return nil
 	}
+
+	var inputs []*TxInput
+	for _, utxo := range utxos {
+		input := &TxInput{
+			Hash:      utxo.TxHash,
+			Index:     utxo.Index,
+			ScriptSig: from,
+		}
+		inputs = append(inputs, input)
+	}
+
 	tokenAmount, _ := strconv.Atoi(amount)
 	output := &TxOutput{
 		Value:        tokenAmount,
 		ScriptPubKey: to,
 	}
-	xiaohongRemainedOutput := &TxOutput{
-		Value:        1,
-		ScriptPubKey: "xiaohong",
+	remainedOutput := &TxOutput{
+		Value:        value - tokenAmount,
+		ScriptPubKey: from,
 	}
 
 	tx := &Transaction{
-		Inputs:  []*TxInput{inputXiaohong},
-		Outputs: []*TxOutput{output, xiaohongRemainedOutput},
+		Inputs:  inputs,
+		Outputs: []*TxOutput{output, remainedOutput},
 	}
 
 	tx.TxHash = Hash(tx)
