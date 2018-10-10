@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"study.com/Day20/types"
 	"study.com/Day20/utils"
 )
 
@@ -47,24 +46,18 @@ func Run() {
 		}
 		break
 	default:
-		exit()
+		utils.Exit()
 	}
 
 	//创建创世区块
 	if genesisFlag.Parsed() {
-		if len(*genesisFlagValue) == 0 {
-			fmt.Println("the genesis block data can not be empty!")
-			exit()
-		}
-
-		txs := types.NewCoinbaseTx(*genesisFlagValue)
-		types.AddGenesisBlockToBlockchain([]*types.Transaction{txs})
+		createGenesisBlock(*genesisFlagValue)
 	}
 
 	if balanceFlag.Parsed() {
 		if len(*balanceFlagValue) == 0 {
 			fmt.Println("the address can not be empty!")
-			exit()
+			utils.Exit()
 		}
 		getBalance(*balanceFlagValue)
 	}
@@ -72,7 +65,7 @@ func Run() {
 	//发送交易
 	if sendFlag.Parsed() {
 		if len(*sendFlagFromValue) == 0 || len(*sendFlagToValue) == 0 || len(*sendFlagAmountValue) == 0 {
-			exit()
+			utils.Exit()
 		} else {
 			from := utils.Json2Slice(*sendFlagFromValue)
 			to := utils.Json2Slice(*sendFlagToValue)
@@ -83,64 +76,20 @@ func Run() {
 
 	//打印所有的区块
 	if printBlockchainFlag.Parsed() {
-		blockchain := types.GetBlockchain()
-		checkBlockchain(blockchain)
-
-		types.PrintBlockChain(blockchain)
+		printBlockchain()
 	}
-}
-
-//获取余额
-func getBalance(address string) {
-	blockchain := types.GetBlockchain()
-	checkBlockchain(blockchain)
-	balance := blockchain.GetBalance(address)
-	fmt.Println("balance:", balance)
-}
-
-//发送交易
-func send(from []string, to []string, amount []string) {
-	blockchain := types.GetBlockchain()
-	checkBlockchain(blockchain)
-	checkTxArgs(from, to, amount)
-
-	var txs []*types.Transaction
-	for index, fromAddr := range from {
-		tx := types.NewTx(fromAddr, to[index], amount[index], blockchain, txs)
-		txs = append(txs, tx)
-	}
-	blockchain.AddBlockToBlockchain(txs)
 }
 
 func checkTxArgs(from, to, amount []string) {
 	if len(from) != len(to) || len(from) != len(amount) {
 		fmt.Println("invalidate arguments")
-		exit()
-	}
-}
-
-func checkBlockchain(blockchain *types.Blockchain) {
-	if blockchain == nil {
-		fmt.Println("please create the genesis block first!")
-		exit()
+		utils.Exit()
 	}
 }
 
 func checkArgsValidate(args []string) {
 	//fmt.Println("args:",args)
 	if len(args) == 1 {
-		exit()
+		utils.Exit()
 	}
-}
-
-func exit() {
-	printUseage()
-	os.Exit(1)
-}
-
-func printUseage() {
-	fmt.Println("genesis -address:create genesis block and add to the blockchain")
-	fmt.Println("balabce -address:get the balance of the specified address")
-	fmt.Println("send -from  -to  -amount:send transaction to the blockchain")
-	fmt.Println("printBlockchain:print the all block")
 }

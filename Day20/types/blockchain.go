@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strconv"
 	"study.com/Day20/db"
+	"study.com/Day20/utils"
 )
 
 type Blockchain struct {
@@ -224,4 +225,11 @@ func PrintBlockChain(blc *Blockchain) {
 	}
 
 	defer db.CloseDB()
+}
+
+func CheckBlockchain(blockchain *Blockchain) {
+	if blockchain == nil {
+		fmt.Println("please create the genesis block first!")
+		utils.Exit()
+	}
 }

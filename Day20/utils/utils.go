@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"log"
+	"os"
 )
 
 /*
@@ -24,4 +26,16 @@ func Json2Slice(str string) []string {
 	var result []string
 	json.Unmarshal([]byte(str), &result)
 	return result
+}
+
+func Exit() {
+	printUseage()
+	os.Exit(1)
+}
+
+func printUseage() {
+	fmt.Println("genesis -address:create genesis block and add to the blockchain")
+	fmt.Println("balabce -address:get the balance of the specified address")
+	fmt.Println("send -from  -to  -amount:send transaction to the blockchain")
+	fmt.Println("printBlockchain:print the all block")
 }
