@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"study.com/Day20/wallet"
 )
 
 /*
@@ -33,9 +34,29 @@ func Exit() {
 	os.Exit(1)
 }
 
+func CheckAddress(address string) {
+	if wallet.IsValidaAddress(address) == false {
+		fmt.Println("the address is invalidate")
+		Exit()
+	}
+}
+
+func CheckTxArgs(from, to, amount []string) {
+	if len(from) != len(to) || len(from) != len(amount) {
+		fmt.Println("invalidate arguments")
+		Exit()
+	}
+
+	for index, from := range from {
+		CheckAddress(from)
+		CheckAddress(to[index])
+	}
+}
+
 func printUseage() {
+	fmt.Println("createWallet: create the wallet")
 	fmt.Println("genesis -address:create genesis block and add to the blockchain")
 	fmt.Println("balabce -address:get the balance of the specified address")
 	fmt.Println("send -from  -to  -amount:send transaction to the blockchain")
-	fmt.Println("printBlockchain:print the all block")
+	fmt.Println("printBlockchain: print the all block")
 }

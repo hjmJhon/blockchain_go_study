@@ -2,19 +2,19 @@ package cmd
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"study.com/Day20/utils"
 )
 
 func Run() {
+	createWalletFlag := flag.NewFlagSet("createWallet", flag.ExitOnError)
 	genesisFlag := flag.NewFlagSet("genesis", flag.ExitOnError)
 	sendFlag := flag.NewFlagSet("send", flag.ExitOnError)
 	balanceFlag := flag.NewFlagSet("balance", flag.ExitOnError)
 	printBlockchainFlag := flag.NewFlagSet("printBlockchain", flag.ExitOnError)
 
-	genesisFlagValue := genesisFlag.String("address", "xiaoming", "create the genesis block's address")
+	genesisFlagValue := genesisFlag.String("address", "", "create the genesis block's address")
 	sendFlagFromValue := sendFlag.String("from", "", "the address sending asset")
 	sendFlagToValue := sendFlag.String("to", "", "the address receiving asset")
 	sendFlagAmountValue := sendFlag.String("amount", "", "asset amount")
@@ -25,6 +25,11 @@ func Run() {
 	checkArgsValidate(args)
 
 	switch args[1] {
+	case "createWallet":
+		if err := createWalletFlag.Parse(args[2:]); err != nil {
+			log.Panic(err)
+		}
+		break
 	case "genesis":
 		if err := genesisFlag.Parse(args[2:]); err != nil {
 			log.Panic(err)
@@ -49,16 +54,17 @@ func Run() {
 		utils.Exit()
 	}
 
+	//创建钱包
+	if createWalletFlag.Parsed() {
+		createWallet()
+	}
+
 	//创建创世区块
 	if genesisFlag.Parsed() {
 		createGenesisBlock(*genesisFlagValue)
 	}
 
 	if balanceFlag.Parsed() {
-		if len(*balanceFlagValue) == 0 {
-			fmt.Println("the address can not be empty!")
-			utils.Exit()
-		}
 		getBalance(*balanceFlagValue)
 	}
 
@@ -77,13 +83,6 @@ func Run() {
 	//打印所有的区块
 	if printBlockchainFlag.Parsed() {
 		printBlockchain()
-	}
-}
-
-func checkTxArgs(from, to, amount []string) {
-	if len(from) != len(to) || len(from) != len(amount) {
-		fmt.Println("invalidate arguments")
-		utils.Exit()
 	}
 }
 
