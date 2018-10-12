@@ -15,6 +15,6 @@
 
 .idea/*
 
-/blockchain.db
 blockchain.db
 main
+wallets/

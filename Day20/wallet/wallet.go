@@ -6,9 +6,14 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/gob"
+	"fmt"
 	"github.com/btcsuite/btcutil/base58"
 	"golang.org/x/crypto/ripemd160"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 )
 
 const VERSION = byte(0x00)
@@ -18,6 +23,9 @@ type Wallet struct {
 	PrivateKey ecdsa.PrivateKey
 	PublicKey  []byte
 }
+
+const walletDir = "./wallets" + string(filepath.Separator)
+const walletSuffix = ".dat"
 
 func NewWallet() *Wallet {
 	priKey, pubKey := newKeyPair()
@@ -98,4 +106,101 @@ func newKeyPair() (ecdsa.PrivateKey, []byte) {
 	//fmt.Printf("pubKey: %x\n", pubKey)
 
 	return *privateKey, pubKey
+}
+
+/*
+	将创建的钱包写入文件中
+*/
+func (w *Wallet) SaveWalletToFile(address string) {
+	wMap := make(map[string]Wallet)
+	wMap[address] = *w
+
+	if _, err := os.Stat(walletDir); err == nil {
+		//do nothing
+	} else {
+		err := os.Mkdir(walletDir, 0755)
+		if err != nil {
+			log.Panic(err)
+		}
+	}
+
+	path := walletDir + address + walletSuffix
+	wBytes := Serialize(wMap)
+	err := ioutil.WriteFile(path, wBytes, 0644)
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+/*
+	获取所有已经创建的钱包地址
+*/
+func AddressList() []string {
+	wMapList := walletList()
+
+	addressList := make([]string, 0)
+	for _, wMap := range wMapList {
+		for k, _ := range wMap {
+			addressList = append(addressList, k)
+		}
+	}
+
+	return addressList
+}
+
+/*
+	获取所有已创建的钱包
+*/
+func walletList() []map[string]Wallet {
+	fileInfos, e := ioutil.ReadDir(walletDir)
+	if e != nil {
+		log.Panic(e)
+	}
+	wMapList := make([]map[string]Wallet, 0)
+	for _, fileInfo := range fileInfos {
+		fileName := walletDir + fileInfo.Name()
+		fmt.Println("wallet fileName:", fileName)
+		contentBytes, err := ioutil.ReadFile(fileName)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		wMap := Deserialize(contentBytes)
+		wMapList = append(wMapList, wMap)
+	}
+	return wMapList
+}
+
+/*
+	将区块序列化为 []byte
+*/
+func Serialize(wMap map[string]Wallet) []byte {
+	var result bytes.Buffer
+
+	gob.Register(elliptic.P256())
+	encoder := gob.NewEncoder(&result)
+
+	err := encoder.Encode(wMap)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return result.Bytes()
+}
+
+/*
+	反序列化
+*/
+func Deserialize(b []byte) map[string]Wallet {
+	wMap := make(map[string]Wallet)
+
+	gob.Register(elliptic.P256())
+	decoder := gob.NewDecoder(bytes.NewReader(b))
+	err := decoder.Decode(&wMap)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return wMap
 }

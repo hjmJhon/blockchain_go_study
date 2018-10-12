@@ -9,6 +9,7 @@ import (
 
 func Run() {
 	createWalletFlag := flag.NewFlagSet("createWallet", flag.ExitOnError)
+	addressListFlag := flag.NewFlagSet("addressList", flag.ExitOnError)
 	genesisFlag := flag.NewFlagSet("genesis", flag.ExitOnError)
 	sendFlag := flag.NewFlagSet("send", flag.ExitOnError)
 	balanceFlag := flag.NewFlagSet("balance", flag.ExitOnError)
@@ -27,6 +28,11 @@ func Run() {
 	switch args[1] {
 	case "createWallet":
 		if err := createWalletFlag.Parse(args[2:]); err != nil {
+			log.Panic(err)
+		}
+		break
+	case "addressList":
+		if err := addressListFlag.Parse(args[2:]); err != nil {
 			log.Panic(err)
 		}
 		break
@@ -57,6 +63,11 @@ func Run() {
 	//创建钱包
 	if createWalletFlag.Parsed() {
 		createWallet()
+	}
+
+	//获取所有已经创建的钱包地址
+	if addressListFlag.Parsed() {
+		addressList()
 	}
 
 	//创建创世区块
