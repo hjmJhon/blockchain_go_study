@@ -13,8 +13,7 @@ func createWallet() {
 	w.SaveWalletToFile(address)
 }
 
-func addressList() []string {
+func addressList() {
 	addrList := wallet.AddressList()
-	fmt.Println("addressList:", addrList)
-	return addrList
+	fmt.Println("addrList", addrList)
 }

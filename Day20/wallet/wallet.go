@@ -19,13 +19,13 @@ import (
 const VERSION = byte(0x00)
 const ADDRESS_CHECKSUM_LEN = 4
 
+const walletDir = "." + string(filepath.Separator) + "wallets" + string(filepath.Separator)
+const walletSuffix = ".dat"
+
 type Wallet struct {
 	PrivateKey ecdsa.PrivateKey
 	PublicKey  []byte
 }
-
-const walletDir = "./wallets" + string(filepath.Separator)
-const walletSuffix = ".dat"
 
 func NewWallet() *Wallet {
 	priKey, pubKey := newKeyPair()
@@ -173,7 +173,7 @@ func walletList() []map[string]Wallet {
 }
 
 /*
-	将区块序列化为 []byte
+	将钱包序列化为 []byte
 */
 func Serialize(wMap map[string]Wallet) []byte {
 	var result bytes.Buffer
