@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"study.com/Day20/wallet"
 )
 
 /*
@@ -35,7 +34,7 @@ func Exit() {
 }
 
 func CheckAddress(address string) {
-	if wallet.IsValidaAddress(address) == false {
+	if IsValidaAddress(address) == false {
 		fmt.Println("the address is invalidate")
 		Exit()
 	}

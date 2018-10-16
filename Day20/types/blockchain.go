@@ -19,6 +19,10 @@ type Blockchain struct {
 	将区块添加进区块链
 */
 func (blc *Blockchain) AddBlockToBlockchain(txs []*Transaction) {
+	//验签
+	if blc.verifyTx(txs) == false {
+		log.Panic("error:invalidate tx")
+	}
 	blockBytes := db.Query(blc.CurrHash)
 	currBlock := Deserialize(blockBytes)
 	block := NewBlock(txs, currBlock.Height+1, currBlock.Hash)
@@ -67,7 +71,7 @@ func (blc *Blockchain) GetUTXOs(address string, txs []*Transaction) []*UTXO {
 	for _, tx := range txs {
 		if tx.Inputs[0].Index != -1 {
 			for _, in := range tx.Inputs {
-				if in.ScriptSig == address {
+				if in.TxInputCanUnLock(address) {
 					spentOutputs[in.Hash] = append(spentOutputs[in.Hash], in.Index)
 				}
 			}
@@ -77,7 +81,7 @@ func (blc *Blockchain) GetUTXOs(address string, txs []*Transaction) []*UTXO {
 	for _, tx := range txs {
 	B:
 		for index, out := range tx.Outputs {
-			if out.ScriptPubKey != address {
+			if out.TxOutputCanUnLock(address) == false {
 				continue
 			}
 			if len(spentOutputs) > 0 {
@@ -117,9 +121,9 @@ func (blc *Blockchain) GetUTXOs(address string, txs []*Transaction) []*UTXO {
 			tx := block.Txs[i]
 			//inputs
 			//排除掉 coinbase 交易的 input
-			if tx.Inputs[0].Index != -1 {
+			if tx.IsCoinbase() == false {
 				for _, in := range tx.Inputs {
-					if in.ScriptSig == address {
+					if in.TxInputCanUnLock(address) {
 						spentOutputs[in.Hash] = append(spentOutputs[in.Hash], in.Index)
 					}
 				}
@@ -129,7 +133,7 @@ func (blc *Blockchain) GetUTXOs(address string, txs []*Transaction) []*UTXO {
 			fmt.Println("spentOutputs: ", spentOutputs)
 		A:
 			for index, out := range tx.Outputs {
-				if out.ScriptPubKey != address {
+				if out.TxOutputCanUnLock(address) == false {
 					continue
 				}
 				if len(spentOutputs) > 0 {
@@ -196,6 +200,43 @@ func (blc *Blockchain) GetSpendableUTXOs(from, to, amount string, txs []*Transac
 	}
 
 	return value, utxosResult
+}
+func (blc *Blockchain) findTxByTxHash(txHash string) *Transaction {
+	iterator := blc.Iterator()
+	for {
+		block := iterator.Next()
+		for _, tx := range block.Txs {
+			if tx.TxHash == txHash {
+				return tx
+			}
+		}
+
+		if block.Height == 0 {
+			break
+		}
+	}
+
+	return nil
+}
+
+/*
+	验签
+*/
+func (blc *Blockchain) verifyTx(txs []*Transaction) bool {
+	for _, tx := range txs {
+		prevTxs := make(map[string]*Transaction)
+		for _, in := range tx.Inputs {
+			transaction := blc.findTxByTxHash(in.Hash)
+			if transaction != nil {
+				prevTxs[in.Hash] = transaction
+			}
+		}
+		if tx.verify(prevTxs) == false {
+			return false
+		}
+	}
+
+	return true
 }
 
 func GetBlockchain() *Blockchain {

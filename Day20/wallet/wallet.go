@@ -5,22 +5,15 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
 	"github.com/btcsuite/btcutil/base58"
-	"golang.org/x/crypto/ripemd160"
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
+	"study.com/Day20/constants"
+	"study.com/Day20/utils"
 )
-
-const VERSION = byte(0x00)
-const ADDRESS_CHECKSUM_LEN = 4
-
-const walletDir = "." + string(filepath.Separator) + "wallets" + string(filepath.Separator)
-const walletSuffix = ".dat"
 
 type Wallet struct {
 	PrivateKey ecdsa.PrivateKey
@@ -36,20 +29,22 @@ func NewWallet() *Wallet {
 }
 
 /*
-	判断钱包地址是否合法
+	根据钱包地址获取钱包
 */
-func IsValidaAddress(address string) bool {
-	addrBytes := base58.Decode(address)
-	//取出 addrBytes 的后 4 个 byte
-	version := addrBytes[len(addrBytes)-ADDRESS_CHECKSUM_LEN:]
+func GetWallet(address string) Wallet {
+	var result Wallet
+	wMapList := walletList()
+A:
+	for _, wMap := range wMapList {
+		for key, w := range wMap {
+			if address == key {
+				result = w
+				break A
+			}
+		}
+	}
 
-	//取出剩下的 byte
-	versionAppendBytes := addrBytes[:len(addrBytes)-ADDRESS_CHECKSUM_LEN]
-
-	//计算 checksum
-	checksum := Checksum(versionAppendBytes)
-
-	return bytes.Compare(version, checksum) == 0
+	return result
 }
 
 /*
@@ -63,31 +58,19 @@ func (w *Wallet) GetAddress() string {
 	产生钱包地址
 */
 func (w *Wallet) generateAddress() string {
-	//sha256
-	sum256 := sha256.Sum256(w.PublicKey)
-
-	//ripemd160
-	hash := ripemd160.New()
-	hash.Write(sum256[:])
-	ripemdBytes := hash.Sum(nil)
+	ripemdBytes := utils.Ripemd160Hash(w.PublicKey)
 
 	//拼接 version 和 ripemdBytes
-	versionAppendBytes := append([]byte{VERSION}, ripemdBytes...)
+	versionAppendBytes := append([]byte{constants.VERSION}, ripemdBytes...)
 
 	//计算 checksum
-	checksum := Checksum(versionAppendBytes)
+	checksum := utils.Checksum(versionAppendBytes)
 
 	//拼接 versionAppendBytes 和  checksum
 	checksumAppendBytes := append(versionAppendBytes, checksum...)
 
 	return base58.Encode(checksumAppendBytes)
 
-}
-
-func Checksum(bytes []byte) []byte {
-	sum256 := sha256.Sum256(bytes)
-	i := sha256.Sum256(sum256[:])
-	return i[:ADDRESS_CHECKSUM_LEN]
 }
 
 /*
@@ -115,16 +98,16 @@ func (w *Wallet) SaveWalletToFile(address string) {
 	wMap := make(map[string]Wallet)
 	wMap[address] = *w
 
-	if _, err := os.Stat(walletDir); err == nil {
+	if _, err := os.Stat(constants.WALLETDIR); err == nil {
 		//do nothing
 	} else {
-		err := os.Mkdir(walletDir, 0755)
+		err := os.Mkdir(constants.WALLETDIR, 0755)
 		if err != nil {
 			log.Panic(err)
 		}
 	}
 
-	path := walletDir + address + walletSuffix
+	path := constants.WALLETDIR + address + constants.WALLET_SUFFIX
 	wBytes := Serialize(wMap)
 	err := ioutil.WriteFile(path, wBytes, 0644)
 	if err != nil {
@@ -152,13 +135,13 @@ func AddressList() []string {
 	获取所有已创建的钱包
 */
 func walletList() []map[string]Wallet {
-	fileInfos, e := ioutil.ReadDir(walletDir)
+	fileInfos, e := ioutil.ReadDir(constants.WALLETDIR)
 	if e != nil {
 		log.Panic(e)
 	}
 	wMapList := make([]map[string]Wallet, 0)
 	for _, fileInfo := range fileInfos {
-		fileName := walletDir + fileInfo.Name()
+		fileName := constants.WALLETDIR + fileInfo.Name()
 		fmt.Println("wallet fileName:", fileName)
 		contentBytes, err := ioutil.ReadFile(fileName)
 		if err != nil {
