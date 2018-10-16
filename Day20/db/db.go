@@ -8,7 +8,7 @@ import (
 var DB *bolt.DB
 
 const DBPATH = "blockchain.db"
-const TABLENAME = "block"
+const TABLENAME_BLOCK = "block"
 
 func openDB() {
 	var err error
@@ -66,9 +66,9 @@ func Query(key []byte) []byte {
 	创建 bucket:存在则直接返回对应bucket,不存在则创建
 */
 func createBucketIfNotExist(tx *bolt.Tx) *bolt.Bucket {
-	bucket := tx.Bucket([]byte(TABLENAME))
+	bucket := tx.Bucket([]byte(TABLENAME_BLOCK))
 	if bucket == nil {
-		bucket, _ = tx.CreateBucket([]byte(TABLENAME))
+		bucket, _ = tx.CreateBucket([]byte(TABLENAME_BLOCK))
 	}
 	return bucket
 }

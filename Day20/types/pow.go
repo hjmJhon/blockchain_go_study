@@ -27,7 +27,7 @@ func NewPOW(block *Block) *POW {
 /*
 	挖矿
 */
-func (pow *POW) Run() (nonce uint64, hash []byte) {
+func (pow *POW) Mine() (nonce uint64, hash []byte) {
 	block := pow.Block
 	preFix := strings.Repeat("0", int(pow.Target))
 	n := uint64(0)

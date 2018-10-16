@@ -64,6 +64,9 @@ func (blc *Blockchain) GetBalance(address string) int {
 	return result
 }
 
+/*
+	根据钱包地址获取 UTXO
+*/
 func (blc *Blockchain) GetUTXOs(address string, txs []*Transaction) []*UTXO {
 	var result []*UTXO
 	var spentOutputs = make(map[string][]int)
@@ -175,6 +178,68 @@ func (blc *Blockchain) GetUTXOs(address string, txs []*Transaction) []*UTXO {
 }
 
 /*
+	查找所有的 UTXO,与钱包地址无关
+*/
+func (blc *Blockchain) FindAllUTXOs() []*UTXO {
+	var result []*UTXO
+	var spentOutputs = make(map[string][]int)
+
+	iterator := blc.Iterator()
+	for {
+		block := iterator.Next()
+		for i := len(block.Txs) - 1; i >= 0; i-- {
+			tx := block.Txs[i]
+			//inputs
+			//排除掉 coinbase 交易的 input
+			if tx.IsCoinbase() == false {
+				for _, in := range tx.Inputs {
+					spentOutputs[in.Hash] = append(spentOutputs[in.Hash], in.Index)
+				}
+			}
+
+			//outputs
+			fmt.Println("spentOutputs: ", spentOutputs)
+		A:
+			for index, out := range tx.Outputs {
+				if len(spentOutputs) > 0 {
+					var isUTXOSpent bool
+					for txhash, indexSlice := range spentOutputs {
+						for _, spentIndex := range indexSlice {
+							if index == spentIndex && txhash == tx.TxHash {
+								isUTXOSpent = true
+								continue A
+							}
+						}
+					}
+
+					if isUTXOSpent == false {
+						utxo := &UTXO{
+							TxHash: tx.TxHash,
+							Index:  index,
+							Output: out,
+						}
+						result = append(result, utxo)
+					}
+				} else {
+					utxo := &UTXO{
+						TxHash: tx.TxHash,
+						Index:  index,
+						Output: out,
+					}
+					result = append(result, utxo)
+				}
+			}
+		}
+
+		if block.Height == 0 {
+			break
+		}
+	}
+
+	return result
+}
+
+/*
 	获取用于交易的 UTXO
 */
 func (blc *Blockchain) GetSpendableUTXOs(from, to, amount string, txs []*Transaction) (int, []*UTXO) {
@@ -201,7 +266,18 @@ func (blc *Blockchain) GetSpendableUTXOs(from, to, amount string, txs []*Transac
 
 	return value, utxosResult
 }
-func (blc *Blockchain) findTxByTxHash(txHash string) *Transaction {
+
+/*
+	根据 txHash 查找 tx,查找的范围包括还未打包到区块的 tx;
+	若 tx 为空,则查找范围只限于已经打包进区块链的 tx
+*/
+func (blc *Blockchain) findTxByTxHash(txHash string, txs []*Transaction) *Transaction {
+	for _, tx := range txs {
+		if tx.TxHash == txHash {
+			return tx
+		}
+	}
+
 	iterator := blc.Iterator()
 	for {
 		block := iterator.Next()
@@ -226,7 +302,7 @@ func (blc *Blockchain) verifyTx(txs []*Transaction) bool {
 	for _, tx := range txs {
 		prevTxs := make(map[string]*Transaction)
 		for _, in := range tx.Inputs {
-			transaction := blc.findTxByTxHash(in.Hash)
+			transaction := blc.findTxByTxHash(in.Hash, txs)
 			if transaction != nil {
 				prevTxs[in.Hash] = transaction
 			}

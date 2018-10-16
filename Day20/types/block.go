@@ -48,7 +48,7 @@ func NewBlock(txs []*Transaction, height uint64, preHash []byte) *Block {
 
 	//挖矿
 	pow := NewPOW(block)
-	nonce, hash := pow.Run()
+	nonce, hash := pow.Mine()
 
 	block.Hash = hash
 	block.Nonce = nonce
