@@ -18,7 +18,7 @@ func (blc *Blockchain) Iterator() *BlockchainIterator {
 }
 
 func (blcIter *BlockchainIterator) Next() *Block {
-	blockBytes := db.Query(blcIter.NextHash)
+	blockBytes := db.Query(blcIter.NextHash, db.TABLENAME_BLOCK)
 	block := Deserialize(blockBytes)
 	blcIter.NextHash = block.PreHash
 	return block

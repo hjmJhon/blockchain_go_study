@@ -23,11 +23,11 @@ func (blc *Blockchain) AddBlockToBlockchain(txs []*Transaction) {
 	if blc.verifyTx(txs) == false {
 		log.Panic("error:invalidate tx")
 	}
-	blockBytes := db.Query(blc.CurrHash)
+	blockBytes := db.Query(blc.CurrHash, db.TABLENAME_BLOCK)
 	currBlock := Deserialize(blockBytes)
 	block := NewBlock(txs, currBlock.Height+1, currBlock.Hash)
-	db.Add(block.Hash, block.Serialize())
-	db.Add([]byte("hash"), block.Hash)
+	db.Add(block.Hash, block.Serialize(), db.TABLENAME_BLOCK)
+	db.Add([]byte("hash"), block.Hash, db.TABLENAME_BLOCK)
 
 	blc.CurrHash = block.Hash
 
@@ -38,14 +38,14 @@ func (blc *Blockchain) AddBlockToBlockchain(txs []*Transaction) {
 	将创世区块添加进区块链
 */
 func AddGenesisBlockToBlockchain(txs []*Transaction) {
-	currHash := db.Query([]byte("hash"))
+	currHash := db.Query([]byte("hash"), db.TABLENAME_BLOCK)
 	if currHash != nil {
 		fmt.Println("创世区块已存在")
 		return
 	}
 	block := CreateGenesisBlock(txs)
-	db.Add(block.Hash, block.Serialize())
-	db.Add([]byte("hash"), block.Hash)
+	db.Add(block.Hash, block.Serialize(), db.TABLENAME_BLOCK)
+	db.Add([]byte("hash"), block.Hash, db.TABLENAME_BLOCK)
 
 	defer db.CloseDB()
 }
@@ -316,7 +316,7 @@ func (blc *Blockchain) verifyTx(txs []*Transaction) bool {
 }
 
 func GetBlockchain() *Blockchain {
-	currHash := db.Query([]byte("hash"))
+	currHash := db.Query([]byte("hash"), db.TABLENAME_BLOCK)
 	if currHash == nil {
 		return nil
 	}
