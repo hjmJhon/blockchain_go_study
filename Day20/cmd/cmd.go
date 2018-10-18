@@ -4,6 +4,8 @@ import (
 	"flag"
 	"log"
 	"os"
+	"study.com/Day20/db"
+	"study.com/Day20/types"
 	"study.com/Day20/utils"
 )
 
@@ -14,6 +16,7 @@ func Run() {
 	sendFlag := flag.NewFlagSet("send", flag.ExitOnError)
 	balanceFlag := flag.NewFlagSet("balance", flag.ExitOnError)
 	printBlockchainFlag := flag.NewFlagSet("printBlockchain", flag.ExitOnError)
+	testFlag := flag.NewFlagSet("test", flag.ExitOnError)
 
 	genesisFlagValue := genesisFlag.String("address", "", "create the genesis block's address")
 	sendFlagFromValue := sendFlag.String("from", "", "the address sending asset")
@@ -56,6 +59,11 @@ func Run() {
 			log.Panic(err)
 		}
 		break
+	case "test":
+		if err := testFlag.Parse(args[2:]); err != nil {
+			log.Panic(err)
+		}
+		break
 	default:
 		utils.Exit()
 	}
@@ -94,6 +102,13 @@ func Run() {
 	//打印所有的区块
 	if printBlockchainFlag.Parsed() {
 		printBlockchain()
+	}
+
+	//测试一些 cmd
+	if testFlag.Parsed() {
+		defer db.CloseDB()
+		types.GetAllUTXOs()
+		//types.ResetUTXOTable()
 	}
 }
 

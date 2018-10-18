@@ -31,7 +31,8 @@ func (blc *Blockchain) AddBlockToBlockchain(txs []*Transaction) {
 
 	blc.CurrHash = block.Hash
 
-	defer db.CloseDB()
+	//更新 utxo 表
+	UpdateUTXO(block.Txs)
 }
 
 /*
@@ -46,6 +47,9 @@ func AddGenesisBlockToBlockchain(txs []*Transaction) {
 	block := CreateGenesisBlock(txs)
 	db.Add(block.Hash, block.Serialize(), db.TABLENAME_BLOCK)
 	db.Add([]byte("hash"), block.Hash, db.TABLENAME_BLOCK)
+
+	//重置 utxo 表
+	ResetUTXOTable()
 
 	defer db.CloseDB()
 }
@@ -71,51 +75,8 @@ func (blc *Blockchain) GetUTXOs(address string, txs []*Transaction) []*UTXO {
 	var result []*UTXO
 	var spentOutputs = make(map[string][]int)
 
-	for _, tx := range txs {
-		if tx.Inputs[0].Index != -1 {
-			for _, in := range tx.Inputs {
-				if in.TxInputCanUnLock(address) {
-					spentOutputs[in.Hash] = append(spentOutputs[in.Hash], in.Index)
-				}
-			}
-		}
-	}
-
-	for _, tx := range txs {
-	B:
-		for index, out := range tx.Outputs {
-			if out.TxOutputCanUnLock(address) == false {
-				continue
-			}
-			if len(spentOutputs) > 0 {
-				var isUTXOSpent bool
-				for txhash, indexSlice := range spentOutputs {
-					for _, spentIndex := range indexSlice {
-						if index == spentIndex && txhash == tx.TxHash {
-							isUTXOSpent = true
-							continue B
-						}
-					}
-				}
-
-				if isUTXOSpent == false {
-					utxo := &UTXO{
-						TxHash: tx.TxHash,
-						Index:  index,
-						Output: out,
-					}
-					result = append(result, utxo)
-				}
-			} else {
-				utxo := &UTXO{
-					TxHash: tx.TxHash,
-					Index:  index,
-					Output: out,
-				}
-				result = append(result, utxo)
-			}
-		}
-	}
+	unPackedUTXOs := GetUnPackedUTXOsByAddress(txs, address)
+	result = append(result, unPackedUTXOs...)
 
 	iterator := blc.Iterator()
 	for {
@@ -127,7 +88,7 @@ func (blc *Blockchain) GetUTXOs(address string, txs []*Transaction) []*UTXO {
 			if tx.IsCoinbase() == false {
 				for _, in := range tx.Inputs {
 					if in.TxInputCanUnLock(address) {
-						spentOutputs[in.Hash] = append(spentOutputs[in.Hash], in.Index)
+						spentOutputs[in.TxHash] = append(spentOutputs[in.TxHash], in.Index)
 					}
 				}
 			}
@@ -178,10 +139,63 @@ func (blc *Blockchain) GetUTXOs(address string, txs []*Transaction) []*UTXO {
 }
 
 /*
-	查找所有的 UTXO,与钱包地址无关
+	根据地址获取未打包的 UTXO
 */
-func (blc *Blockchain) FindAllUTXOs() []*UTXO {
+func GetUnPackedUTXOsByAddress(txs []*Transaction, address string) []*UTXO {
 	var result []*UTXO
+	var spentOutputs = make(map[string][]int)
+	for _, tx := range txs {
+		if tx.Inputs[0].Index != -1 {
+			for _, in := range tx.Inputs {
+				if in.TxInputCanUnLock(address) {
+					spentOutputs[in.TxHash] = append(spentOutputs[in.TxHash], in.Index)
+				}
+			}
+		}
+	}
+	for _, tx := range txs {
+	B:
+		for index, out := range tx.Outputs {
+			if out.TxOutputCanUnLock(address) == false {
+				continue
+			}
+			if len(spentOutputs) > 0 {
+				var isUTXOSpent bool
+				for txhash, indexSlice := range spentOutputs {
+					for _, spentIndex := range indexSlice {
+						if index == spentIndex && txhash == tx.TxHash {
+							isUTXOSpent = true
+							continue B
+						}
+					}
+				}
+
+				if isUTXOSpent == false {
+					utxo := &UTXO{
+						TxHash: tx.TxHash,
+						Index:  index,
+						Output: out,
+					}
+					result = append(result, utxo)
+				}
+			} else {
+				utxo := &UTXO{
+					TxHash: tx.TxHash,
+					Index:  index,
+					Output: out,
+				}
+				result = append(result, utxo)
+			}
+		}
+	}
+	return result
+}
+
+/*
+	查找链上所有的 UTXO,与钱包地址无关
+*/
+func (blc *Blockchain) FindAllUTXOs() map[string]*UTXOSet {
+	var result = make(map[string]*UTXOSet)
 	var spentOutputs = make(map[string][]int)
 
 	iterator := blc.Iterator()
@@ -189,11 +203,12 @@ func (blc *Blockchain) FindAllUTXOs() []*UTXO {
 		block := iterator.Next()
 		for i := len(block.Txs) - 1; i >= 0; i-- {
 			tx := block.Txs[i]
+			utxoSet := &UTXOSet{[]*UTXO{}}
 			//inputs
 			//排除掉 coinbase 交易的 input
 			if tx.IsCoinbase() == false {
 				for _, in := range tx.Inputs {
-					spentOutputs[in.Hash] = append(spentOutputs[in.Hash], in.Index)
+					spentOutputs[in.TxHash] = append(spentOutputs[in.TxHash], in.Index)
 				}
 			}
 
@@ -218,7 +233,8 @@ func (blc *Blockchain) FindAllUTXOs() []*UTXO {
 							Index:  index,
 							Output: out,
 						}
-						result = append(result, utxo)
+						utxoSet.UTXOs = append(utxoSet.UTXOs, utxo)
+						result[tx.TxHash] = utxoSet
 					}
 				} else {
 					utxo := &UTXO{
@@ -226,7 +242,8 @@ func (blc *Blockchain) FindAllUTXOs() []*UTXO {
 						Index:  index,
 						Output: out,
 					}
-					result = append(result, utxo)
+					utxoSet.UTXOs = append(utxoSet.UTXOs, utxo)
+					result[tx.TxHash] = utxoSet
 				}
 			}
 		}
@@ -240,9 +257,9 @@ func (blc *Blockchain) FindAllUTXOs() []*UTXO {
 }
 
 /*
-	获取用于交易的 UTXO
+	获取满足交易 amount 的 UTXO
 */
-func (blc *Blockchain) GetSpendableUTXOs(from, to, amount string, txs []*Transaction) (int, []*UTXO) {
+func (blc *Blockchain) GetEnoughUTXOs(from, to, amount string, txs []*Transaction) (int, []*UTXO) {
 	utxos := blc.GetUTXOs(from, txs)
 
 	var value int
@@ -260,7 +277,7 @@ func (blc *Blockchain) GetSpendableUTXOs(from, to, amount string, txs []*Transac
 		}
 	}
 	if value < number {
-		fmt.Println("余额不足")
+		log.Panic("error: no enough token to transaction")
 		return -1, utxosResult
 	}
 
@@ -302,9 +319,9 @@ func (blc *Blockchain) verifyTx(txs []*Transaction) bool {
 	for _, tx := range txs {
 		prevTxs := make(map[string]*Transaction)
 		for _, in := range tx.Inputs {
-			transaction := blc.findTxByTxHash(in.Hash, txs)
+			transaction := blc.findTxByTxHash(in.TxHash, txs)
 			if transaction != nil {
-				prevTxs[in.Hash] = transaction
+				prevTxs[in.TxHash] = transaction
 			}
 		}
 		if tx.verify(prevTxs) == false {

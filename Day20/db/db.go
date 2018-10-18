@@ -9,8 +9,7 @@ var DB *bolt.DB
 
 const DBPATH = "blockchain.db"
 const TABLENAME_BLOCK = "block"
-
-//const TABLENAME_UTXO = "utxo"
+const TABLENAME_UTXO = "utxo"
 
 func openDB() {
 	var err error
@@ -25,6 +24,32 @@ func openDB() {
 func CloseDB() {
 	if DB != nil {
 		DB.Close()
+	}
+}
+
+/*
+	一次添加多个 数据
+*/
+func AddArray(keys, values [][]byte, tableName string) {
+	if len(keys) != len(values) {
+		log.Panic("error: len(keyArray) != len(valueArray)")
+	}
+	openDB()
+	err := DB.Update(func(tx *bolt.Tx) error {
+		bucket := createBucketIfNotExist(tx, tableName)
+		if bucket != nil {
+			for index, _ := range keys {
+				e := bucket.Put(keys[index], values[index])
+				if e != nil {
+					log.Panic(e)
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
 	}
 }
 
@@ -46,6 +71,70 @@ func Add(key, value []byte, tableName string) {
 	}
 }
 
+/*
+	更新单个数据
+*/
+func Update(deleteKey, addKey, addValue []byte, tableName string) {
+	if addKey == nil || len(addKey) == 0 {
+		return
+	}
+	openDB()
+	err := DB.Update(func(tx *bolt.Tx) error {
+		bucket := createBucketIfNotExist(tx, tableName)
+		if bucket != nil {
+			e := bucket.Delete(deleteKey)
+			if e != nil {
+				log.Panic(e)
+			}
+			e = bucket.Put(addKey, addValue)
+			if e != nil {
+				log.Panic(e)
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+/*
+	一次更新多个数据
+*/
+func UpdateArray(deleteKeys, addKeys, addValues [][]byte, tableName string) {
+	if deleteKeys == nil {
+		return
+	}
+	if len(addKeys) != len(addValues) {
+		return
+	}
+	openDB()
+	err := DB.Update(func(tx *bolt.Tx) error {
+		bucket := createBucketIfNotExist(tx, tableName)
+		if bucket != nil {
+			for _, key := range deleteKeys {
+				e := bucket.Delete(key)
+				if e != nil {
+					log.Panic(e)
+				}
+			}
+
+			for index, addKey := range addKeys {
+				e := bucket.Put(addKey, addValues[index])
+				if e != nil {
+					log.Panic(e)
+				}
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
 func Query(key []byte, tableName string) []byte {
 	openDB()
 	var result []byte
@@ -55,6 +144,27 @@ func Query(key []byte, tableName string) []byte {
 			result = bucket.Get(key)
 		}
 
+		return nil
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return result
+}
+
+/*
+	查询所有数据
+*/
+func QueryAll(tableName string) map[string][]byte {
+	openDB()
+	var result = make(map[string][]byte)
+	err := DB.View(func(tx *bolt.Tx) error {
+		bucket := createBucketIfNotExist(tx, tableName)
+		bucket.ForEach(func(k, v []byte) error {
+			result[string(k)] = v
+			return nil
+		})
 		return nil
 	})
 	if err != nil {

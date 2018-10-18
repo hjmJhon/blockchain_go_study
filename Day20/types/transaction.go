@@ -21,13 +21,13 @@ type Transaction struct {
 }
 
 func (tx *Transaction) IsCoinbase() bool {
-	return tx.Inputs[0].Index == -1 && len(tx.Inputs[0].Hash) == 0
+	return tx.Inputs[0].Index == -1 && len(tx.Inputs[0].TxHash) == 0
 }
 
 func NewCoinbaseTx(address string) *Transaction {
 	w := wallet.GetWallet(address)
 	input := &TxInput{
-		Hash:      "",
+		TxHash:    "",
 		Index:     -1,
 		Signature: []byte("genesis block"),
 		PublicKey: w.PublicKey,
@@ -45,8 +45,8 @@ func NewCoinbaseTx(address string) *Transaction {
 /*
 	创建交易
 */
-func NewTx(from, to, amount string, blc *Blockchain, txs []*Transaction) *Transaction {
-	value, utxos := blc.GetSpendableUTXOs(from, to, amount, txs)
+func NewTx(from, to, amount string, txs []*Transaction) *Transaction {
+	value, utxos := GetEnoughUTXO(from, amount, txs)
 	if value == -1 {
 		return nil
 	}
@@ -55,7 +55,7 @@ func NewTx(from, to, amount string, blc *Blockchain, txs []*Transaction) *Transa
 	w := wallet.GetWallet(from)
 	for _, utxo := range utxos {
 		input := &TxInput{
-			Hash:      utxo.TxHash,
+			TxHash:    utxo.TxHash,
 			Index:     utxo.Index,
 			Signature: nil,
 			PublicKey: w.PublicKey,
@@ -103,7 +103,7 @@ func (tx *Transaction) sign(utxos []*UTXO, privateKey ecdsa.PrivateKey) {
 	for index, input := range txCopy.Inputs {
 		var utxo *UTXO
 		for _, u := range utxos {
-			if input.Hash == u.TxHash {
+			if input.TxHash == u.TxHash {
 				utxo = u
 				break
 			}
@@ -142,7 +142,7 @@ func (tx *Transaction) verify(prevTxs map[string]*Transaction) bool {
 	txCopy := tx.trimmedCopy()
 	curve := elliptic.P256()
 	for index, in := range tx.Inputs {
-		prevTx := prevTxs[in.Hash]
+		prevTx := prevTxs[in.TxHash]
 		txCopy.Inputs[index].Signature = nil
 		txCopy.Inputs[index].PublicKey = prevTx.Outputs[in.Index].Ripemd160Hash
 		txCopy.TxHash = txCopy.trimmedTxHash()
@@ -181,7 +181,7 @@ func (tx *Transaction) trimmedCopy() *Transaction {
 	var outputs []*TxOutput
 	for _, in := range tx.Inputs {
 		input := &TxInput{
-			Hash:      in.Hash,
+			TxHash:    in.TxHash,
 			Index:     in.Index,
 			Signature: nil,
 			PublicKey: nil,

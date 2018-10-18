@@ -6,8 +6,9 @@ import (
 )
 
 type TxInput struct {
-	Hash  string
-	Index int
+	//tx 的 TxHash
+	TxHash string
+	Index  int
 	//签名
 	Signature []byte
 	//公钥, 即钱包中的 PublicKey
