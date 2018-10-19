@@ -13,13 +13,14 @@ import (
 )
 
 type Block struct {
-	Height    uint64
-	Txs       []*Transaction
-	Nonce     uint64
-	Diff      uint64
-	PreHash   []byte
-	Hash      []byte
-	Timestamp int64
+	Height         uint64
+	Txs            []*Transaction
+	Nonce          uint64
+	Diff           uint64
+	PreHash        []byte
+	Hash           []byte
+	Timestamp      int64
+	MerkleRootHash []byte
 }
 
 func (block *Block) setHash() {
@@ -45,6 +46,14 @@ func NewBlock(txs []*Transaction, height uint64, preHash []byte) *Block {
 		PreHash:   preHash,
 		Timestamp: time.Now().Unix(),
 	}
+
+	var txByteArr [][]byte
+	for _, tx := range txs {
+		txByte := tx.Serialize()
+		txByteArr = append(txByteArr, txByte)
+	}
+	merkleTree := NewMerkleTree(txByteArr)
+	block.MerkleRootHash = merkleTree.RootNode.Hash
 
 	//挖矿
 	pow := NewPOW(block)
