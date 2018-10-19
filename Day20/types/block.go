@@ -109,28 +109,31 @@ func BuildTxHashBytes(Txs []*Transaction) []byte {
 }
 
 type blockString struct {
-	Height    uint64         `json:"height"`
-	Txs       []*Transaction `json:"tx"`
-	Nonce     uint64         `json:"nonce"`
-	Diff      uint64         `json:"diff"`
-	PreHash   string         `json:"pre_hash""`
-	Hash      string         `json:"hash"`
-	Timestamp string         `json:"timestamp"`
+	Height         uint64         `json:"height"`
+	Txs            []*Transaction `json:"tx"`
+	Nonce          uint64         `json:"nonce"`
+	Diff           uint64         `json:"diff"`
+	PreHash        string         `json:"pre_hash""`
+	Hash           string         `json:"hash"`
+	Timestamp      string         `json:"timestamp"`
+	MerkleRootHash string         `json:"merkle_rootHash"`
 }
 
 func (block *Block) ToString() {
 	preHash := hex.EncodeToString(block.PreHash)
 	hash := hex.EncodeToString(block.Hash)
 	timeStamp := time.Unix(block.Timestamp, 0).Format("2006-01-02 03:04:05 PM")
+	merkleRootHash := hex.EncodeToString(block.MerkleRootHash)
 
 	blockString := blockString{
-		Height:    block.Height,
-		Txs:       block.Txs,
-		Nonce:     block.Nonce,
-		Diff:      block.Diff,
-		PreHash:   preHash,
-		Hash:      hash,
-		Timestamp: timeStamp,
+		Height:         block.Height,
+		Txs:            block.Txs,
+		Nonce:          block.Nonce,
+		Diff:           block.Diff,
+		PreHash:        preHash,
+		Hash:           hash,
+		Timestamp:      timeStamp,
+		MerkleRootHash: merkleRootHash,
 	}
 
 	blockBytes, _ := json.Marshal(blockString)
