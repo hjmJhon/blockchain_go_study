@@ -1,20 +1,25 @@
 package db
 
 import (
+	"fmt"
 	"github.com/boltdb/bolt"
 	"log"
+	"study.com/Day20/utils"
 )
 
 var DB *bolt.DB
 
-const DBPATH = "blockchain.db"
+const DBPATH = "blockchain_%s.db"
 const TABLENAME_BLOCK = "block"
 const TABLENAME_UTXO = "utxo"
 
 func openDB() {
+	nodeId := utils.GetNodeId()
+	fmt.Println("nodeId:", nodeId)
+	dbPath := fmt.Sprintf(DBPATH, nodeId)
 	var err error
 	if DB == nil {
-		DB, err = bolt.Open(DBPATH, 0600, nil)
+		DB, err = bolt.Open(dbPath, 0600, nil)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"study.com/Day20/db"
@@ -10,6 +11,14 @@ import (
 )
 
 func Run() {
+
+	nodeId := utils.GetNodeId()
+	if len(nodeId) == 0 {
+		fmt.Println("nodeId is empty !")
+		utils.Exit()
+	}
+
+	startNodeFlag := flag.NewFlagSet("startNode", flag.ExitOnError)
 	createWalletFlag := flag.NewFlagSet("createWallet", flag.ExitOnError)
 	addressListFlag := flag.NewFlagSet("addressList", flag.ExitOnError)
 	genesisFlag := flag.NewFlagSet("genesis", flag.ExitOnError)
@@ -41,6 +50,11 @@ func Run() {
 		break
 	case "genesis":
 		if err := genesisFlag.Parse(args[2:]); err != nil {
+			log.Panic(err)
+		}
+		break
+	case "startNode":
+		if err := startNodeFlag.Parse(args[2:]); err != nil {
 			log.Panic(err)
 		}
 		break
@@ -81,6 +95,12 @@ func Run() {
 	//创建创世区块
 	if genesisFlag.Parsed() {
 		createGenesisBlock(*genesisFlagValue)
+	}
+
+	//启动节点
+	if startNodeFlag.Parsed() {
+		fmt.Println("nodeId:", nodeId)
+		startNode()
 	}
 
 	if balanceFlag.Parsed() {

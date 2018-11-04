@@ -19,5 +19,9 @@ func send(from []string, to []string, amount []string) {
 		tx := types.NewTx(fromAddr, to[index], amount[index], txs)
 		txs = append(txs, tx)
 	}
-	blockchain.AddBlockToBlockchain(txs)
+
+	//blockchain.AddBlockToBlockchain(txs)
+	for _, tx := range txs {
+		types.SendTx(types.KnownNodes[0], tx)
+	}
 }

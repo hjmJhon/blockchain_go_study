@@ -52,6 +52,10 @@ func CheckTxArgs(from, to, amount []string) {
 	}
 }
 
+func GetNodeId() string {
+	return os.Getenv("NODE_ID")
+}
+
 func printUseage() {
 	fmt.Println("createWallet: create the wallet")
 	fmt.Println("genesis -address:create genesis block and add to the blockchain")

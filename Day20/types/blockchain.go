@@ -286,7 +286,7 @@ func (blc *Blockchain) GetEnoughUTXOs(from, to, amount string, txs []*Transactio
 
 /*
 	根据 txHash 查找 tx,查找的范围包括还未打包到区块的 tx;
-	若 tx 为空,则查找范围只限于已经打包进区块链的 tx
+	若 txs 为空,则查找范围只限于已经打包进区块链的 tx
 */
 func (blc *Blockchain) findTxByTxHash(txHash string, txs []*Transaction) *Transaction {
 	for _, tx := range txs {
@@ -313,7 +313,8 @@ func (blc *Blockchain) findTxByTxHash(txHash string, txs []*Transaction) *Transa
 }
 
 /*
-	验签
+	验签.
+	txs:所有待验签的区块
 */
 func (blc *Blockchain) verifyTx(txs []*Transaction) bool {
 	for _, tx := range txs {
@@ -330,6 +331,58 @@ func (blc *Blockchain) verifyTx(txs []*Transaction) bool {
 	}
 
 	return true
+}
+
+/*
+	获取最新的区块高度
+*/
+func (blc *Blockchain) GetLatestHeight() uint64 {
+	blockByte := db.Query([]byte(blc.CurrHash), db.TABLENAME_BLOCK)
+	block := Deserialize(blockByte)
+	return block.Height
+}
+
+/*
+	获取所有区块的 hash
+*/
+func (blc *Blockchain) GetBlockHashes() [][]byte {
+	var hashes [][]byte
+	iterator := blc.Iterator()
+
+	for {
+		block := iterator.Next()
+
+		hashes = append(hashes, block.Hash)
+
+		if len(block.PreHash) == 0 {
+			break
+		}
+	}
+
+	return hashes
+}
+
+/*
+	将区块添加进区块链
+*/
+func (blc *Blockchain) AddBlock(block *Block) {
+
+	db.Add(block.Hash, block.Serialize(), db.TABLENAME_BLOCK)
+	db.Add([]byte("hash"), block.Hash, db.TABLENAME_BLOCK)
+
+	blc.CurrHash = block.Hash
+
+	//更新 utxo 表
+	UpdateUTXO(block.Txs)
+}
+
+/*
+	根据 hash 获取 block
+*/
+func GetBlockByHash(hash []byte) *Block {
+	blockByte := db.Query(hash, db.TABLENAME_BLOCK)
+
+	return Deserialize(blockByte)
 }
 
 func GetBlockchain() *Blockchain {

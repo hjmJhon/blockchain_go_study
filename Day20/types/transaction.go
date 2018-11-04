@@ -222,6 +222,18 @@ func (tx *Transaction) Serialize() []byte {
 	return result.Bytes()
 }
 
+func DeserializeTx(txByte []byte) *Transaction {
+	var tx Transaction
+
+	decoder := gob.NewDecoder(bytes.NewReader(txByte))
+	err := decoder.Decode(&tx)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return &tx
+}
+
 func (tx *Transaction) trimmedTxHash() string {
 	txCopy := *tx
 	txCopy.TxHash = ""
