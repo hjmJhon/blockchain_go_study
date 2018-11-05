@@ -88,7 +88,7 @@ func StartServer() {
 
 }
 
-func sendVersion(addr string, blc *Blockchain) {
+func sendVersion(senderAddr string, blc *Blockchain) {
 	v := version{
 		Version:    NODE_VERSION,
 		BestHeight: blc.GetLatestHeight(),
@@ -97,16 +97,16 @@ func sendVersion(addr string, blc *Blockchain) {
 	data := gobEncode(v)
 	request := append(commandToBytes("version"), data...)
 
-	sendData(addr, request)
+	sendData(senderAddr, request)
 }
 
-func sendData(addr string, request []byte) {
-	conn, e := net.Dial(NETWORK, addr)
+func sendData(senderAddr string, request []byte) {
+	conn, e := net.Dial(NETWORK, senderAddr)
 	if e != nil {
-		fmt.Printf("%s is not available \n", addr)
+		fmt.Printf("%s is not available \n", senderAddr)
 		var tempNodeAddrs []string
 		for _, node := range KnownNodes {
-			if addr != node {
+			if senderAddr != node {
 				tempNodeAddrs = append(tempNodeAddrs, node)
 			}
 		}
@@ -351,7 +351,7 @@ func handleGetBlocks(request []byte, blc *Blockchain) {
 
 }
 
-func sendInv(addr string, kind string, items [][]byte) {
+func sendInv(senderAddr string, kind string, items [][]byte) {
 	invData := inv{
 		AddrFrom: nodeAddress,
 		Type:     kind,
@@ -360,7 +360,7 @@ func sendInv(addr string, kind string, items [][]byte) {
 	dataByte := gobEncode(invData)
 	request := append(commandToBytes("inv"), dataByte...)
 
-	sendData(addr, request)
+	sendData(senderAddr, request)
 }
 
 func handleVersion(request []byte, blc *Blockchain) {
@@ -386,11 +386,11 @@ func handleVersion(request []byte, blc *Blockchain) {
 	}
 }
 
-func sendGetBlocks(addr string) {
+func sendGetBlocks(senderAddr string) {
 	data := getblocks{AddrFrom: nodeAddress}
 	request := append(commandToBytes("getblocks"), gobEncode(data)...)
 
-	sendData(addr, request)
+	sendData(senderAddr, request)
 }
 
 func gobEncode(data interface{}) []byte {
