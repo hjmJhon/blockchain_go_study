@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"study.com/Day20/constants"
 	"study.com/Day20/utils"
 	"time"
 )
@@ -33,7 +34,7 @@ func (block *Block) setHash() {
 	创建创世区块
 */
 func CreateGenesisBlock(txs []*Transaction) *Block {
-	return NewBlock(txs, 1, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+	return NewBlock(txs, constants.GENESISBLOCK_HEIGHT, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
 }
 
 /*

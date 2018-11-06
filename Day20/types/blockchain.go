@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"strconv"
+	"study.com/Day20/constants"
 	"study.com/Day20/db"
 	"study.com/Day20/utils"
 )
@@ -248,7 +249,7 @@ func (blc *Blockchain) FindAllUTXOs() map[string]*UTXOSet {
 			}
 		}
 
-		if block.Height == 0 {
+		if block.Height == constants.GENESISBLOCK_HEIGHT {
 			break
 		}
 	}
@@ -304,7 +305,7 @@ func (blc *Blockchain) findTxByTxHash(txHash string, txs []*Transaction) *Transa
 			}
 		}
 
-		if block.Height == 0 {
+		if block.Height == constants.GENESISBLOCK_HEIGHT {
 			break
 		}
 	}
@@ -354,7 +355,7 @@ func (blc *Blockchain) GetBlockHashes() [][]byte {
 
 		hashes = append(hashes, block.Hash)
 
-		if len(block.PreHash) == 0 {
+		if block.Height == constants.GENESISBLOCK_HEIGHT {
 			break
 		}
 	}

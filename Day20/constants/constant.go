@@ -8,3 +8,5 @@ const ADDRESS_CHECKSUM_LEN = 4
 
 const WALLETDIR = "." + string(filepath.Separator) + "wallets" + string(filepath.Separator)
 const WALLET_SUFFIX = ".dat"
+
+const GENESISBLOCK_HEIGHT uint64 = 1
