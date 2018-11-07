@@ -7,7 +7,7 @@ import (
 )
 
 //发送交易
-func send(from []string, to []string, amount []string) {
+func send(from []string, to []string, amount []string, mineNow bool) {
 	defer db.CloseDB()
 
 	blockchain := types.GetBlockchain()
@@ -20,8 +20,11 @@ func send(from []string, to []string, amount []string) {
 		txs = append(txs, tx)
 	}
 
-	//blockchain.AddBlockToBlockchain(txs)
-	for _, tx := range txs {
-		types.SendTx(types.KnownNodes[0], tx)
+	if mineNow {
+		blockchain.AddBlockToBlockchain(txs)
+	} else {
+		for _, tx := range txs {
+			types.SendTx(types.KnownNodes[0], tx)
+		}
 	}
 }

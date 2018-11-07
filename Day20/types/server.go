@@ -104,6 +104,7 @@ func sendData(senderAddr string, request []byte) {
 	conn, e := net.Dial(NETWORK, senderAddr)
 	if e != nil {
 		fmt.Printf("%s is not available \n", senderAddr)
+		fmt.Println("err:", e.Error())
 		var tempNodeAddrs []string
 		for _, node := range KnownNodes {
 			if senderAddr != node {
@@ -272,7 +273,9 @@ func handleGetData(request []byte, blc *Blockchain) {
 	if payload.Type == "tx" {
 		txHash := hex.EncodeToString(payload.Item)
 		tx := txMemPool[txHash]
-
+		if tx == nil {
+			return
+		}
 		SendTx(payload.AddrFrom, tx)
 	}
 }

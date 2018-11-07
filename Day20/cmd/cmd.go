@@ -31,6 +31,7 @@ func Run() {
 	sendFlagFromValue := sendFlag.String("from", "", "the address sending asset")
 	sendFlagToValue := sendFlag.String("to", "", "the address receiving asset")
 	sendFlagAmountValue := sendFlag.String("amount", "", "asset amount")
+	sendFlagMine := sendFlag.Bool("mine", false, "mine immediately on this node")
 	balanceFlagValue := balanceFlag.String("address", "", "get the balance of the specified address")
 
 	args := os.Args
@@ -115,7 +116,7 @@ func Run() {
 			from := utils.Json2Slice(*sendFlagFromValue)
 			to := utils.Json2Slice(*sendFlagToValue)
 			amount := utils.Json2Slice(*sendFlagAmountValue)
-			send(from, to, amount)
+			send(from, to, amount, *sendFlagMine)
 		}
 	}
 

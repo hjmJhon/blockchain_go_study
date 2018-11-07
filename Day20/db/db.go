@@ -143,7 +143,7 @@ func UpdateArray(deleteKeys, addKeys, addValues [][]byte, tableName string) {
 func Query(key []byte, tableName string) []byte {
 	openDB()
 	var result []byte
-	err := DB.View(func(tx *bolt.Tx) error {
+	err := DB.Update(func(tx *bolt.Tx) error {
 		bucket := createBucketIfNotExist(tx, tableName)
 		if bucket != nil {
 			result = bucket.Get(key)
@@ -164,12 +164,15 @@ func Query(key []byte, tableName string) []byte {
 func QueryAll(tableName string) map[string][]byte {
 	openDB()
 	var result = make(map[string][]byte)
-	err := DB.View(func(tx *bolt.Tx) error {
+	err := DB.Update(func(tx *bolt.Tx) error {
 		bucket := createBucketIfNotExist(tx, tableName)
-		bucket.ForEach(func(k, v []byte) error {
-			result[string(k)] = v
-			return nil
-		})
+		if bucket != nil {
+			bucket.ForEach(func(k, v []byte) error {
+				result[string(k)] = v
+				return nil
+			})
+		}
+
 		return nil
 	})
 	if err != nil {
@@ -181,7 +184,7 @@ func QueryAll(tableName string) map[string][]byte {
 
 func DeleteTable(tableName string) {
 	openDB()
-	err := DB.View(func(tx *bolt.Tx) error {
+	err := DB.Update(func(tx *bolt.Tx) error {
 		ifExist, _ := bucketIfExist(tx, tableName)
 		if ifExist {
 			tx.DeleteBucket([]byte(tableName))
@@ -199,13 +202,14 @@ func DeleteTable(tableName string) {
 	创建 bucket:存在则直接返回对应bucket,不存在则创建
 */
 func createBucketIfNotExist(tx *bolt.Tx, tableName string) *bolt.Bucket {
-	ifExist, bucket := bucketIfExist(tx, tableName)
-	if ifExist == true {
-		return bucket
-	} else {
-		bucket, _ = tx.CreateBucket([]byte(tableName))
-		return bucket
+	//writable := tx.Writable()
+	//fmt.Println("writable:", writable)
+
+	bucket, err := tx.CreateBucketIfNotExists([]byte(tableName))
+	if err != nil {
+		log.Print("err: " + err.Error())
 	}
+	return bucket
 }
 
 func bucketIfExist(tx *bolt.Tx, tableName string) (bool, *bolt.Bucket) {
