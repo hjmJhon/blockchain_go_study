@@ -16,6 +16,7 @@ type UTXOSet struct {
 func GetBalance(address string) int {
 	var result int
 	utxos := GetUTXOsByAddress(address)
+	fmt.Println("GetBalance utxos size", len(utxos))
 	for _, utxo := range utxos {
 		result += utxo.Output.Value
 	}

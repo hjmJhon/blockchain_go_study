@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
+	"fmt"
 	"log"
 	"math/big"
 	"strconv"
@@ -26,6 +27,10 @@ func (tx *Transaction) IsCoinbase() bool {
 
 func NewCoinbaseTx(address string) *Transaction {
 	w := wallet.GetWallet(address)
+	if w == nil {
+		fmt.Println("no wallet or wallet invalid")
+		return nil
+	}
 	input := &TxInput{
 		TxHash:    "",
 		Index:     -1,
@@ -53,6 +58,10 @@ func NewTx(from, to, amount string, txs []*Transaction) *Transaction {
 
 	var inputs []*TxInput
 	w := wallet.GetWallet(from)
+	if w == nil {
+		fmt.Println("no wallet or wallet invalid")
+		return nil
+	}
 	for _, utxo := range utxos {
 		input := &TxInput{
 			TxHash:    utxo.TxHash,

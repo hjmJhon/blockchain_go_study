@@ -17,6 +17,9 @@ func send(from []string, to []string, amount []string, mineNow bool) {
 	var txs []*types.Transaction
 	for index, fromAddr := range from {
 		tx := types.NewTx(fromAddr, to[index], amount[index], txs)
+		if tx == nil {
+			continue
+		}
 		txs = append(txs, tx)
 	}
 

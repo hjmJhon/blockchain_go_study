@@ -31,14 +31,14 @@ func NewWallet() *Wallet {
 /*
 	根据钱包地址获取钱包
 */
-func GetWallet(address string) Wallet {
-	var result Wallet
+func GetWallet(address string) *Wallet {
+	var result *Wallet
 	wMapList := walletList()
 A:
 	for _, wMap := range wMapList {
 		for key, w := range wMap {
 			if address == key {
-				result = w
+				result = &w
 				break A
 			}
 		}
@@ -139,6 +139,7 @@ func walletList() []map[string]Wallet {
 	if e != nil {
 		log.Panic(e)
 	}
+	fmt.Println("钱包数量:", len(fileInfos))
 	wMapList := make([]map[string]Wallet, 0)
 	for _, fileInfo := range fileInfos {
 		fileName := constants.WALLETDIR + fileInfo.Name()
